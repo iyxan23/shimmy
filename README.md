@@ -56,27 +56,34 @@ Or with `go generate`:
 
 ```mermaid
 flowchart LR
-    iface["Your interface\n(store.go)"]
-
-    subgraph gen["shimmy (code generator)"]
-        parse["Parse interface\nAST"]
-        generate["Generate shim\nscaffolding"]
-    end
-
-    subgraph out["_shim_gen.go (generated)"]
-        shim["KVStoreShim\nstruct"]
-        mwiface["KVStoreMiddleware\ninterface"]
-        base["BaseKVStoreMiddleware\nstruct"]
-        call["GetCall / SetCall / ...\nenvelopes"]
-        interceptor["NewKVStoreInterceptor\nconstructor"]
-    end
+    iface["Your interface (store.go)"]
 
     iface --> parse --> generate
     generate --> shim
     generate --> mwiface
     generate --> base
-    generate --> call
+    generate --> callenv
     generate --> interceptor
+
+    subgraph gen["shimmy (code generator)"]
+        parse["`**Parse interface**
+        AST`"]
+        generate["`**Generate shim**
+        Scaffolding`"]
+    end
+
+    subgraph out["_shim_gen.go (generated)"]
+        shim["`**KVStoreShim**
+        struct`"]
+        mwiface["`**KVStoreMiddleware**
+        interface`"]
+        base["`**BaseKVStoreMiddleware**
+        struct`"]
+        callenv["`**GetCall / SetCall / ...**
+        envelopes`"]
+        interceptor["`**NewKVStoreInterceptor**
+        constructor`"]
+    end
 ```
 
 ### Runtime execution
@@ -89,10 +96,10 @@ short-circuit and return early without calling the next layer.
 sequenceDiagram
     participant C as Caller
     participant S as KVStoreShim
-    participant M0 as Middleware[0]\nKVStoreLogging
-    participant M1 as Middleware[1]\nInterceptor
-    participant M2 as Middleware[2]\nKVStoreCache
-    participant I as Inner\n(real impl)
+    participant M0 as Middleware[0]: KVStoreLogging
+    participant M1 as Middleware[1]: Interceptor
+    participant M2 as Middleware[2]: KVStoreCache
+    participant I as Inner (real impl)
 
     C->>S: Get(ctx, key)
     S->>M0: AroundGet(ctx, key, next)
@@ -109,16 +116,11 @@ sequenceDiagram
 ## What Gets Generated
 
 For any interface, shimmy generates five things in a single `_shim_gen.go` file:
-
-**1. A shim struct**: holds the inner implementation and a middleware slice.
-
-**2. A middleware interface**: one typed `Around<Method>` function per interface method.
-
-**3. A base middleware struct**: passthrough implementations of every `Around` method. Embed it and override only what you need.
-
-**4. A Call envelope per method**: a struct carrying all inputs and outputs for a single invocation, implementing the `shimmy.Call` interface. Provides `Method()`, `Args()`, and `Results()` for generic access, plus typed fields for direct access via type assertion.
-
-**5. A `New<Interface>Interceptor` constructor**: wraps a `func(shimmy.Call, func())` as a middleware value, allowing uniform position-controlled behavior anywhere in the chain.
+1. **A shim struct**: holds the inner implementation and a middleware slice.
+2. **A middleware interface**: one typed `Around<Method>` function per interface method.
+3. **A base middleware struct**: passthrough implementations of every `Around` method. Embed it and override only what you need.
+4. **A Call envelope per method**: a struct carrying all inputs and outputs for a single invocation, implementing the `shimmy.Call` interface. Provides `Method()`, `Args()`, and `Results()` for generic access, plus typed fields for direct access via type assertion.
+5. **A `New<Interface>Interceptor` constructor**: wraps a `func(shimmy.Call, func())` as a middleware value, allowing uniform position-controlled behavior anywhere in the chain.
 
 ## Example
 
