@@ -1,6 +1,6 @@
 <h1 align=center><pre>shimmy</pre></h1>
 
-The simplest, thinnest Go decorator generator ever.
+A Go decorator boilerplate generator so you can focus on writing behavior.
 
 Shimmy generates composable middleware scaffolding from your Go interface
 definitions. Instead of writing identical wrapper boilerplate for each
